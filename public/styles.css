@@ -1,0 +1,29 @@
+/* public/styles.css */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f8f9fa;
+}
+
+.container {
+  max-width: 800px;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  background-color: #f1f8ff;
+  font-weight: 600;
+}
+
+.language-switcher {
+  margin-bottom: 20px;
+}
+
+.btn-outline-primary {
+  margin-left: 10px;
+}
