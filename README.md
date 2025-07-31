@@ -268,8 +268,8 @@ MIT License – feel free to use, modify, and distribute for educational or inst
 
 ## **Contact**
 
-Daniel IRYIVUZE
-Email: [d.iryivuze@alustudent.com](mailto:d.iryivuze@alustudent.com)
-GitHub: [Daniel-IRYIVUZE](https://github.com/Daniel-IRYIVUZE)
+- Daniel IRYIVUZE
+- Email: [d.iryivuze@alustudent.com](mailto:d.iryivuze@alustudent.com)
+- GitHub: [Daniel-IRYIVUZE](https://github.com/Daniel-IRYIVUZE)
 
 ---

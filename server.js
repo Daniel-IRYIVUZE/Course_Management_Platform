@@ -1,6 +1,6 @@
 // server.js
 const app = require('./app');
-const sequelize = require('./config/db');
+const sequelize = require('./config/redis');
 const redisClient = require('./utils/redisClient');
 const { startNotificationWorker } = require('./workers/notificationWorker');
 
