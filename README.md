@@ -1,11 +1,11 @@
 # Zanda College Course Management Platform
 
-This backend service was developed by **Daniel Iryivuze** as part of a course-related summative assignment at **ALU**. The system supports academic coordination, including course allocations, facilitator activity tracking, and a multilingual student reflection page in English, French, and Kinyarwanda.
+** Daniel Iryivuze developed this backend service** as part of a course-related summative assignment at **ALU**. The system supports academic coordination, including course allocations, facilitator activity tracking, and a multilingual student reflection page in English, French, and Kinyarwanda.
 
 **Developer**: Daniel Iryivuze  
 **Institution**: African Leadership University, Rwanda  
 **Submission Date**: July 31, 2025  
-**Demo Video**: [Watch the walkthrough](https://youtu.be/your-demo-link-here)  
+**Demo Video**: [Watch the walkthrough](https://youtu.be/aNXUIH1QoTI)  
 **Reflection Page**: [View Deployed Student Reflection Page](https://daniel-iryivuze.github.io/Course_Management_Platform/)
 
 ---
@@ -181,7 +181,7 @@ COURSE_MANAGEMENT_PLATFORM/
 * **API Documentation via Swagger**
 * **Unit Tests with Jest**
 * **GitHub-hosted Code & Deployed Reflection Page**
-* **Demo Video**: [Click to watch](https://youtu.be/your-demo-link-here)
+* **Demo Video**: [Click to watch](https://youtu.be/aNXUIH1QoTI)
 
 ---
 
