@@ -1,112 +1,88 @@
-const redisClient = require('../config/redis');
-const { User } = require('../models');
-const nodemailer = require('nodemailer');
-const dotenv = require('dotenv');
+import { Worker } from 'bullmq';
+import { sendEmail } from '../services/emailService.js';
+import db from '../models/index.js';
 
-dotenv.config();
+const worker = new Worker('notifications', async (job) => {
+  const { type, userId, data } = job.data;
 
-const NOTIFICATION_QUEUE = 'fat_notifications';
-const REMINDER_QUEUE = 'fat_reminders';
+  try {
+    const user = await db.User.findByPk(userId, {
+      include: [db.Facilitator, db.Manager, db.Student]
+    });
 
-// Email transporter configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    if (!user) throw new Error(`User ${userId} not found`);
+
+    let notification;
+    let emailContent;
+
+    switch(type) {
+      case 'facilitator_log_reminder':
+        notification = {
+          title: 'Activity Log Reminder',
+          message: `Please submit your activity log for week ${data.weekNumber}`,
+          type: 'reminder'
+        };
+        emailContent = {
+          subject: 'Activity Log Submission Reminder',
+          text: `Dear ${user.first_name},\n\nThis is a reminder to submit your activity log for week ${data.weekNumber}.\n\nBest regards,\nThe Education Team`
+        };
+        break;
+
+      case 'facilitator_log_missed':
+        notification = {
+          title: 'Missed Activity Log Deadline',
+          message: `You missed the deadline for week ${data.weekNumber}`,
+          type: 'alert'
+        };
+        emailContent = {
+          subject: 'Missed Activity Log Deadline',
+          text: `Dear ${user.first_name},\n\nYou missed the deadline for submitting your activity log for week ${data.weekNumber}.\n\nBest regards,\nThe Education Team`
+        };
+        break;
+
+      case 'manager_alert':
+        notification = {
+          title: 'Facilitator Log Status',
+          message: `Facilitator ${user.first_name} ${user.last_name} has ${data.status} their activity log for week ${data.weekNumber}`,
+          type: 'alert'
+        };
+        emailContent = {
+          subject: 'Facilitator Log Status Update',
+          text: `Facilitator ${user.first_name} ${user.last_name} has ${data.status} their activity log for week ${data.weekNumber}.`
+        };
+        break;
+
+      default:
+        throw new Error(`Unknown notification type: ${type}`);
+    }
+
+    await db.Notification.create({
+      user_id: userId,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type,
+      is_read: false,
+      metadata: JSON.stringify(data)
+    });
+
+    await sendEmail(user.email, emailContent.subject, emailContent.text);
+    return { success: true, userId, notification };
+  } catch (error) {
+    console.error(`Notification failed for job ${job.id}:`, error);
+    throw error;
+  }
+}, {
+  connection: {
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
   }
 });
 
-const processNotifications = async () => {
-  try {
-    // Get notification from queue
-    const notificationStr = await redisClient.rPop(NOTIFICATION_QUEUE);
-    if (!notificationStr) return;
+worker.on('completed', (job) => {
+  console.log(`Notification job ${job.id} completed for user ${job.data.userId}`);
+});
 
-    const notification = JSON.parse(notificationStr);
-    console.log('Processing notification:', notification.type);
+worker.on('failed', (job, err) => {
+  console.error(`Notification job ${job.id} failed:`, err);
+});
 
-    // Handle different notification types
-    switch (notification.type) {
-      case 'manager_alert':
-        await handleManagerAlert(notification);
-        break;
-      default:
-        console.log('Unknown notification type:', notification.type);
-    }
-  } catch (error) {
-    console.error('Error processing notification:', error);
-  }
-};
-
-const processReminders = async () => {
-  try {
-    // Get reminder from queue
-    const reminderStr = await redisClient.rPop(REMINDER_QUEUE);
-    if (!reminderStr) return;
-
-    const reminder = JSON.parse(reminderStr);
-    console.log('Processing reminder for facilitator:', reminder.facilitatorId);
-
-    // Send reminder email
-    await sendReminderEmail(reminder);
-  } catch (error) {
-    console.error('Error processing reminder:', error);
-  }
-};
-
-const handleManagerAlert = async (notification) => {
-  try {
-    // Get all managers
-    const managers = await User.findAll({
-      where: { role: 'manager' },
-      attributes: ['email']
-    });
-
-    if (!managers.length) return;
-
-    // Send email to all managers
-    const mailOptions = {
-      from: `"Zanda College CMS" <${process.env.EMAIL_FROM}>`,
-      to: managers.map(m => m.email).join(','),
-      subject: 'FAT Submission Alert',
-      text: notification.message,
-      html: `<p>${notification.message}</p>`
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log('Manager alert email sent');
-  } catch (error) {
-    console.error('Error sending manager alert email:', error);
-  }
-};
-
-const sendReminderEmail = async (reminder) => {
-  try {
-    const facilitator = await User.findByPk(reminder.facilitatorId);
-    if (!facilitator) return;
-
-    const mailOptions = {
-      from: `"Zanda College CMS" <${process.env.EMAIL_FROM}>`,
-      to: facilitator.email,
-      subject: 'Reminder: FAT Submission Due',
-      text: `Dear ${facilitator.firstName},\n\nThis is a reminder to submit your Facilitator Activity Tracker for week ${reminder.weekNumber}.\n\nBest regards,\nZanda College CMS`,
-      html: `<p>Dear ${facilitator.firstName},</p>
-             <p>This is a reminder to submit your Facilitator Activity Tracker for week ${reminder.weekNumber}.</p>
-             <p>Best regards,<br>Zanda College CMS</p>`
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log('Reminder email sent to:', facilitator.email);
-  } catch (error) {
-    console.error('Error sending reminder email:', error);
-  }
-};
-
-// Start workers
-setInterval(processNotifications, 5000);
-setInterval(processReminders, 60000); // Check every minute
-
-console.log('Notification workers started');
+export default worker;

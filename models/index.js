@@ -1,117 +1,66 @@
-const sequelize = require('./database');
-const User = require('./User');
-const Module = require('./Module');
-const Cohort = require('./Cohort');
-const Class = require('./Class');
-const Mode = require('./Mode');
-const Trimester = require('./Trimester');
-const Intake = require('./Intake');
-const CourseOffering = require('./CourseOffering');
-const ActivityTracker = require('./ActivityTracker');
-const { Sequelize } = require('sequelize');
-const config = require('../config/database')[process.env.NODE_ENV || 'development'];
+import { readdirSync } from 'fs';
+import { basename as _basename, join, dirname } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';  // Added pathToFileURL
+import Sequelize from 'sequelize';
+import sequelize from '../connection/connection.js';
+import { setupAssociations } from './associations.js';
 
-const sequelize = new Sequelize(
-  config.database,
-  config.username,
-  config.password,
-  {
-    host: config.host,
-    port: config.port,
-    dialect: config.dialect, // This should be 'mysql'
-    logging: config.logging,
-    pool: config.pool
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const basename = _basename(__filename);
+
+const db = {};
+
+async function loadModels() {
+  const files = readdirSync(__dirname).filter(file => {
+    return (
+      file.indexOf('.') !== 0 &&
+      file !== basename &&
+      file !== 'associations.js' && // important to exclude
+      file.slice(-3) === '.js' &&
+      file.indexOf('.test.js') === -1
+    );
+  });
+
+  for (const file of files) {
+    // Convert the absolute path to file:// URL for import()
+    const modulePath = pathToFileURL(join(__dirname, file)).href;
+
+    const modelModule = await import(modulePath);
+    const model = modelModule.default;
+
+    if (!model) {
+      console.error(`Model not found in file: ${file}`);
+      continue;
+    }
+
+    if (!model.name) {
+      console.error(`Model in file ${file} has no name`);
+      continue;
+    }
+
+    db[model.name] = model;
   }
-);
-// User Relationships
-User.hasMany(CourseOffering, {
-  foreignKey: 'facilitatorId',
-  as: 'courseOfferings'
-});
-CourseOffering.belongsTo(User, {
-  foreignKey: 'facilitatorId',
-  as: 'facilitator'
-});
 
-// Module Relationships
-Module.hasMany(CourseOffering, {
-  foreignKey: 'moduleId',
-  as: 'courseOfferings'
-});
-CourseOffering.belongsTo(Module, {
-  foreignKey: 'moduleId',
-  as: 'module'
-});
+  // Setup associations
+  setupAssociations(sequelize);
 
-// Cohort Relationships
-Cohort.hasMany(CourseOffering, {
-  foreignKey: 'cohortId',
-  as: 'courseOfferings'
-});
-CourseOffering.belongsTo(Cohort, {
-  foreignKey: 'cohortId',
-  as: 'cohort'
-});
+  Object.keys(db).forEach(modelName => {
+    if (db[modelName].associate) {
+      db[modelName].associate(db);
+    }
+  });
 
-// Class Relationships
-Class.hasMany(CourseOffering, {
-  foreignKey: 'classId',
-  as: 'courseOfferings'
-});
-CourseOffering.belongsTo(Class, {
-  foreignKey: 'classId',
-  as: 'class'
-});
+  db.sequelize = sequelize;
+  db.Sequelize = Sequelize;
 
-// Trimester Relationships
-Trimester.hasMany(CourseOffering, {
-  foreignKey: 'trimesterId',
-  as: 'courseOfferings'
-});
-CourseOffering.belongsTo(Trimester, {
-  foreignKey: 'trimesterId',
-  as: 'trimester'
-});
+  // Optional sync (uncomment if needed)
+  await sequelize.sync({ alert: true });
 
-// Intake Relationships
-Intake.hasMany(CourseOffering, {
-  foreignKey: 'intakeId',
-  as: 'courseOfferings'
-});
-CourseOffering.belongsTo(Intake, {
-  foreignKey: 'intakeId',
-  as: 'intake'
-});
+  console.log('Database synchronized (models synced).');
+}
 
-// Mode Relationships
-Mode.hasMany(CourseOffering, {
-  foreignKey: 'modeId',
-  as: 'courseOfferings'
-});
-CourseOffering.belongsTo(Mode, {
-  foreignKey: 'modeId',
-  as: 'mode'
-});
+// Run the loader
+await loadModels();
 
-// Activity Tracker Relationships
-CourseOffering.hasMany(ActivityTracker, {
-  foreignKey: 'courseOfferingId',
-  as: 'activityLogs'
-});
-ActivityTracker.belongsTo(CourseOffering, {
-  foreignKey: 'courseOfferingId',
-  as: 'courseOffering'
-});
-
-module.exports = {
-  sequelize,
-  User,
-  Module,
-  Cohort,
-  Class,
-  Mode,
-  Trimester,
-  Intake,
-  CourseOffering,
-  ActivityTracker
-};
+export default db;

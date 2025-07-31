@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Course Feedback</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container fade-in" role="main" aria-labelledby="title">
+    <header>
+      <nav class="top-bar" aria-label="Site settings">
+        <div class="language-switcher" role="navigation" aria-label="Language selection">
+          <button class="language-btn active" data-lang="en" aria-pressed="true">English</button>
+          <button class="language-btn" data-lang="fr" aria-pressed="false">Français</button>
+          <button class="language-btn" data-lang="rw" aria-pressed="false">Kinyarwanda</button>
+        </div>
+        <div class="theme-switcher">
+          <label class="theme-label" for="theme-toggle">
+            <input type="checkbox" id="theme-toggle" aria-checked="false" role="switch" />
+            <span>Dark Mode</span>
+          </label>
+        </div>
+      </nav>
+
+      <h1 id="title">COURSE FEEDBACK</h1>
+      <p id="welcome">Please share your thoughts about the course</p>
+    </header>
+
+    <main>
+      <form id="feedback-form" novalidate>
+        <section class="form-group">
+          <label for="q1" id="q1-label">What did you enjoy most about the course?</label>
+          <textarea id="q1" rows="3" required aria-describedby="q1-label"></textarea>
+        </section>
+
+        <section class="form-group">
+          <label for="q2" id="q2-label">What was the most challenging part?</label>
+          <textarea id="q2" rows="3" required aria-describedby="q2-label"></textarea>
+        </section>
+
+        <section class="form-group">
+          <label for="q3" id="q3-label">What could be improved?</label>
+          <textarea id="q3" rows="3" required aria-describedby="q3-label"></textarea>
+        </section>
+
+        <section class="form-group">
+          <label for="q4" id="q4-label">How would you rate the instructor's teaching?</label>
+          <select id="q4" required aria-describedby="q4-label">
+            <option value="" disabled selected>-- Select --</option>
+            <option value="excellent" id="excellent">Excellent</option>
+            <option value="good" id="good">Good</option>
+            <option value="average" id="average">Average</option>
+            <option value="poor" id="poor">Poor</option>
+          </select>
+        </section>
+
+        <fieldset class="form-group" aria-labelledby="q5-label">
+          <legend id="q5-label">Was the course material clear and well-organized?</legend>
+          <label>
+            <input type="radio" name="q5" value="yes" required />
+            <span id="yes-label">Yes</span>
+          </label>
+          <label>
+            <input type="radio" name="q5" value="no" />
+            <span id="no-label">No</span>
+          </label>
+        </fieldset>
+
+        <fieldset class="form-group" aria-labelledby="q6-label">
+          <legend id="q6-label">Would you recommend this course to others?</legend>
+          <label>
+            <input type="radio" name="q6" value="yes" required />
+            <span id="yes-label-2">Yes</span>
+          </label>
+          <label>
+            <input type="radio" name="q6" value="no" />
+            <span id="no-label-2">No</span>
+          </label>
+        </fieldset>
+
+        <section class="form-group">
+          <label for="q7" id="q7-label">Any other comments or suggestions?</label>
+          <textarea id="q7" rows="3" aria-describedby="q7-label"></textarea>
+        </section>
+
+        <div class="form-buttons">
+          <button type="submit" id="submit-btn">Submit Feedback</button>
+          <button type="reset" id="reset-btn">Reset Form</button>
+        </div>
+      </form>
+
+      <p id="thank-you" class="hidden" role="alert" aria-live="polite">Thank you for your feedback!</p>
+    </main>
+  </div>
+
+  <script src="translations.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>

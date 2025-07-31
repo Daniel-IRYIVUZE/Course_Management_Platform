@@ -1,0 +1,285 @@
+/* Global Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  background-color: #f9f9f9;
+  color: #333;
+  padding: 20px;
+  line-height: 1.6;
+  transition: background-color 0.4s, color 0.4s;
+}
+
+/* Container Styling */
+.container {
+  max-width: 800px;
+  margin: auto;
+  background-color: #fff;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Header & Top Bar */
+header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Language Switcher */
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.language-btn {
+  padding: 8px 14px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.language-btn:hover,
+.language-btn:focus {
+  background-color: #e0e0e0;
+  outline: none;
+}
+
+.language-btn.active {
+  background-color: #ff9900;
+  color: #fff;
+  border-color: #ff9900;
+}
+
+/* Theme Label */
+.theme-label {
+  font-size: 15px;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  background: #f1f1f1;
+  transition: background 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-label:hover,
+.theme-label:focus {
+  background: #e1e1e1;
+  outline: none;
+}
+
+/* Headings */
+h1 {
+  color: #ff7b00;
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+/* Form Elements */
+.form-group,
+fieldset.form-group {
+  margin-bottom: 25px;
+}
+
+label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: block;
+  cursor: pointer;
+}
+
+textarea,
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+  resize: vertical;
+  background-color: #fff;
+  transition: border-color 0.3s;
+}
+
+textarea:focus,
+select:focus {
+  border-color: #ff7b00;
+  outline: none;
+}
+
+/* Fieldset & Legend for Radio Groups */
+fieldset.form-group {
+  border: none;
+  padding: 0;
+  margin: 0 0 25px 0;
+}
+
+legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+input[type="radio"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+/* Form Buttons */
+.form-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+  flex-wrap: wrap;
+}
+
+button[type="submit"],
+button[type="reset"] {
+  padding: 12px 24px;
+  font-size: 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.25s ease, transform 0.2s ease;
+}
+
+button[type="submit"] {
+  background-color: #ff6600;
+  color: #fff;
+}
+
+button[type="submit"]:hover,
+button[type="submit"]:focus {
+  background-color: #b35f00;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+button[type="reset"] {
+  background-color: #ddd;
+  color: #333;
+}
+
+button[type="reset"]:hover,
+button[type="reset"]:focus {
+  background-color: #ccc;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+/* Thank You Message */
+#thank-you {
+  margin-top: 30px;
+  font-weight: bold;
+  text-align: center;
+  font-size: 16px;
+  color: green;
+  animation: fadeIn 0.6s ease-in;
+}
+
+/* Utility */
+.hidden {
+  display: none;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #1f1f1f;
+  color: #f0f0f0;
+}
+
+body.dark .container {
+  background-color: #2a2a2a;
+  box-shadow: 0 8px 30px rgba(255, 255, 255, 0.05);
+}
+
+body.dark textarea,
+body.dark select {
+  background-color: #3a3a3a;
+  color: #f0f0f0;
+  border-color: #666;
+}
+
+body.dark .language-btn {
+  background-color: #444;
+  color: #ddd;
+  border-color: #666;
+}
+
+body.dark .language-btn.active {
+  background-color: #f79a4d;
+  border-color: #f79a4d;
+  color: #fff;
+}
+
+body.dark .theme-label {
+  background-color: #444;
+  color: #ddd;
+}
+
+body.dark button[type="submit"] {
+  background-color: #f79a4d;
+}
+
+body.dark button[type="submit"]:hover,
+body.dark button[type="submit"]:focus {
+  background-color: #f08e33;
+}
+
+body.dark button[type="reset"] {
+  background-color: #555;
+  color: #eee;
+}
+
+body.dark button[type="reset"]:hover,
+body.dark button[type="reset"]:focus {
+  background-color: #444;
+}
+
+body.dark #thank-you {
+  color: #90ee90;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

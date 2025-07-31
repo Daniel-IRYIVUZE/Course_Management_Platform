@@ -1,121 +1,267 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const i18next = require('i18next');
-const i18nextMiddleware = require('i18next-http-middleware');
-const Backend = require('i18next-fs-backend');
-const path = require('path');
-const swaggerJsdoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
-const redisClient = require('./config/redis');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-// Import routes
-const authRoutes = require('./routes/authRoutes');
-const courseAllocationRoutes = require('./routes/courseAllocationRoutes');
-const activityTrackerRoutes = require('./routes/activityTrackerRoutes');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Initialize express
+import express from 'express';
+
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+
+import setupMiddleware from './middleware/config.js';
+import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
+import cohortRoutes from './routes/cohort.routes.js';
+import classRoutes from './routes/class.routes.js';
+import moduleRoutes from './routes/module.routes.js';
+import swaggerTags from './swagger/swagger.tags.js';
+import courseOfferingRoutes from './routes/courseOffering.routes.js';
+import activityLogRoutes from './routes/activityLog.routes.js';
+import gradeRoutes from './routes/grade.routes.js';
+
+import DeadlineChecker from './services/deadlineChecker.js';
+import notificationWorker from './workers/notificationWorker.js';
+
+// Start the deadline checker cron jobs
+DeadlineChecker.startCronJobs();
+
+// Start the notification worker if it's a function
+if (typeof notificationWorker === 'function') {
+  notificationWorker();
+}
+
 const app = express();
 
-// Enable CORS
-app.use(cors());
+// Apply middleware
+setupMiddleware(app);
 
-// Security headers
-app.use(helmet());
-
-// Logger
-app.use(morgan('dev'));
-
-// Body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Internationalization
-i18next
-  .use(Backend)
-  .use(i18nextMiddleware.LanguageDetector)
-  .init({
-    backend: {
-      loadPath: path.join(__dirname, 'translations/{{lng}}.json')
-    },
-    fallbackLng: 'en',
-    preload: ['en', 'fr', 'rw'],
-    saveMissing: true
-  });
-
-app.use(i18nextMiddleware.handle(i18next));
-
-// Swagger documentation
+// Swagger configuration
 const swaggerOptions = {
-  definition: {
+  swaggerDefinition: {
     openapi: '3.0.0',
     info: {
-      title: 'Zanda College Course Management Platform API',
+      title: 'Course Management API',
       version: '1.0.0',
-      description: 'API documentation for Zanda College CMS',
+      description: 'API for managing courses, users, and activities in Rwandan academic institutions',
       contact: {
-        name: 'Zanda College IT Support',
-        email: 'it-support@zandacollege.edu.rw'
-      }
+        email: 'info@rwandanuniversity.ac.rw',
+      },
     },
-    servers: [
-      {
-        url: 'http://localhost:5000/api',
-        description: 'Development server'
-      }
-    ],
+    tags: swaggerTags,
     components: {
+      schemas: {
+        UserBase: {
+          type: 'object',
+          required: ['username', 'email', 'password', 'first_name', 'last_name'],
+          properties: {
+            username: {
+              type: 'string',
+              minLength: 3,
+              maxLength: 250,
+              example: 'mugisha_jean',
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+              maxLength: 100,
+              example: 'mugisha.jean@unr.rw',
+            },
+            password: {
+              type: 'string',
+              format: 'password',
+              minLength: 8,
+              example: 'securePassword123',
+            },
+            first_name: {
+              type: 'string',
+              maxLength: 250,
+              example: 'Jean',
+            },
+            last_name: {
+              type: 'string',
+              maxLength: 250,
+              example: 'Mugisha',
+            },
+          },
+        },
+        StudentInput: {
+          allOf: [
+            { $ref: '#/components/schemas/UserBase' },
+            {
+              type: 'object',
+              required: ['student_id'],
+              properties: {
+                student_id: {
+                  type: 'string',
+                  maxLength: 50,
+                  example: 'STU20250001',
+                },
+              },
+            },
+          ],
+        },
+        FacilitatorInput: {
+          allOf: [
+            { $ref: '#/components/schemas/UserBase' },
+            {
+              type: 'object',
+              properties: {
+                faculty_position: {
+                  type: 'string',
+                  maxLength: 250,
+                  example: 'Lecturer',
+                },
+                specialization: {
+                  type: 'string',
+                  maxLength: 200,
+                  example: 'Agricultural Engineering',
+                },
+              },
+            },
+          ],
+        },
+        ManagerInput: {
+          allOf: [
+            { $ref: '#/components/schemas/UserBase' },
+            {
+              type: 'object',
+              properties: {
+                department: {
+                  type: 'string',
+                  maxLength: 100,
+                  example: 'Faculty of Science and Technology',
+                },
+              },
+            },
+          ],
+        },
+        User: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'integer',
+              example: 1,
+            },
+            username: {
+              type: 'string',
+              example: 'mugisha_jean',
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+              example: 'mugisha.jean@unr.rw',
+            },
+            role: {
+              type: 'string',
+              enum: ['manager', 'facilitator', 'student'],
+              example: 'student',
+            },
+            first_name: {
+              type: 'string',
+              example: 'Jean',
+            },
+            last_name: {
+              type: 'string',
+              example: 'Mugisha',
+            },
+            student_id: {
+              type: 'string',
+              nullable: true,
+              example: 'STU20250001',
+            },
+            faculty_position: {
+              type: 'string',
+              nullable: true,
+              example: 'Lecturer',
+            },
+            specialization: {
+              type: 'string',
+              nullable: true,
+              example: 'Agricultural Engineering',
+            },
+            department: {
+              type: 'string',
+              nullable: true,
+              example: 'Faculty of Science and Technology',
+            },
+            created_at: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-07-31T09:00:00Z',
+            },
+            updated_at: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-07-31T09:00:00Z',
+            },
+          },
+        },
+        AuthResponse: {
+          type: 'object',
+          properties: {
+            token: {
+              type: 'string',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            user: {
+              $ref: '#/components/schemas/User',
+            },
+          },
+        },
+        ErrorResponse: {
+          type: 'object',
+          properties: {
+            error: {
+              type: 'string',
+              example: 'Error message',
+            },
+            details: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+              example: ['Validation error detail 1', 'Validation error detail 2'],
+            },
+          },
+        },
+      },
       securitySchemes: {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
+          bearerFormat: 'JWT',
+        },
+      },
     },
-    security: [{
-      bearerAuth: []
-    }]
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
   },
-  apis: ['./routes/*.js']
+  apis: ['./routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+// Register routes
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/cohorts', cohortRoutes);
+app.use('/classes', classRoutes);
+app.use('/modules', moduleRoutes);
+app.use('/course-offerings', courseOfferingRoutes);
+app.use('/activity-logs', activityLogRoutes);
+app.use('/grades', gradeRoutes);
+
+// Swagger UI route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
+console.log('Starting app.js');
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/course-offerings', courseAllocationRoutes);
-app.use('/api/activity-logs', activityTrackerRoutes);
-
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString()
-  });
+// Start server
+app.listen(5000, () => {
+  console.log('Listening on port 5000');
+  console.log('API documentation available at http://localhost:5000/api-docs');
 });
-
-// 404 handler
-app.use((req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: 'Not found'
-  });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-module.exports = app;
