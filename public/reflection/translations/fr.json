@@ -1,0 +1,11 @@
+{
+  "title": "Réflexion sur le cours",
+  "welcomeMessage": "Bienvenue sur votre page de réflexion sur le cours. Veuillez partager vos réflexions sur le cours.",
+  "question1": "Qu'avez-vous le plus apprécié dans ce cours?",
+  "question2": "Quelle a été la partie la plus difficile?",
+  "question3": "Qu'est-ce qui pourrait être amélioré?",
+  "saveButton": "Enregistrer la réflexion",
+  "footerText": "© 2023 Zanda College. Tous droits réservés.",
+  "savedMessage": "Votre réflexion a été enregistrée!",
+  "errorMessage": "Erreur lors de l'enregistrement de votre réflexion. Veuillez réessayer."
+}

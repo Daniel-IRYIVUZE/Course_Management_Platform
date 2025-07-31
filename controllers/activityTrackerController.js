@@ -1,31 +1,202 @@
-// controllers/activityTrackerController.js
-const ActivityTracker = require('../models').ActivityTracker;
-const CourseOffering = require('../models').CourseOffering;
-const Facilitator = require('../models').Facilitator;
-const { sendNotification } = require('../services/notificationService');
-const ErrorResponse = require('../utils/errorHandler').ErrorResponse;
+const { ActivityTracker, CourseOffering, User } = require('../models');
+const { Op } = require('sequelize');
+const notificationService = require('../services/notificationService');
 
-exports.getActivityLogs = async (req, res, next) => {
+exports.createActivityLog = async (req, res) => {
   try {
-    let filter = {};
-    
-    if (req.user.role === 'facilitator') {
-      const facilitator = await Facilitator.findOne({ where: { userId: req.user.id } });
-      const courseOfferings = await CourseOffering.findAll({ where: { facilitatorId: facilitator.id } });
-      filter.courseOfferingId = courseOfferings.map(co => co.id);
+    const { courseOfferingId, weekNumber, attendance, formativeOneGrading, 
+      formativeTwoGrading, summativeGrading, courseModeration, 
+      intranetSync, gradeBookStatus, comments } = req.body;
+
+    // Check if the user is the facilitator for this course offering
+    const courseOffering = await CourseOffering.findByPk(courseOfferingId);
+    if (!courseOffering || courseOffering.facilitatorId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to create log for this course'
+      });
     }
 
-    if (req.query.weekNumber) filter.weekNumber = req.query.weekNumber;
-    if (req.query.courseOfferingId) filter.courseOfferingId = req.query.courseOfferingId;
+    // Check if log already exists for this week
+    const existingLog = await ActivityTracker.findOne({
+      where: {
+        courseOfferingId,
+        weekNumber
+      }
+    });
 
-    const activityLogs = await ActivityTracker.findAll({
-      where: filter,
+    if (existingLog) {
+      return res.status(400).json({
+        success: false,
+        message: 'Activity log already exists for this week'
+      });
+    }
+
+    // Create new activity log
+    const activityLog = await ActivityTracker.create({
+      courseOfferingId,
+      weekNumber,
+      attendance,
+      formativeOneGrading,
+      formativeTwoGrading,
+      summativeGrading,
+      courseModeration,
+      intranetSync,
+      gradeBookStatus,
+      comments
+    });
+
+    // Send notification to manager
+    await notificationService.sendManagerAlert(
+      req.user.id,
+      courseOfferingId,
+      weekNumber,
+      'submitted'
+    );
+
+    res.status(201).json({
+      success: true,
+      data: activityLog
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+exports.updateActivityLog = async (req, res) => {
+  try {
+    const { attendance, formativeOneGrading, formativeTwoGrading, 
+      summativeGrading, courseModeration, intranetSync, 
+      gradeBookStatus, comments } = req.body;
+
+    const activityLog = await ActivityTracker.findByPk(req.params.id, {
       include: [
         { 
           model: CourseOffering,
+          as: 'courseOffering',
+          attributes: ['facilitatorId']
+        }
+      ]
+    });
+
+    if (!activityLog) {
+      return res.status(404).json({
+        success: false,
+        message: 'Activity log not found'
+      });
+    }
+
+    // Check if the user is the facilitator for this course offering
+    if (activityLog.courseOffering.facilitatorId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this log'
+      });
+    }
+
+    // Update the log
+    activityLog.attendance = attendance || activityLog.attendance;
+    activityLog.formativeOneGrading = formativeOneGrading || activityLog.formativeOneGrading;
+    activityLog.formativeTwoGrading = formativeTwoGrading || activityLog.formativeTwoGrading;
+    activityLog.summativeGrading = summativeGrading || activityLog.summativeGrading;
+    activityLog.courseModeration = courseModeration || activityLog.courseModeration;
+    activityLog.intranetSync = intranetSync || activityLog.intranetSync;
+    activityLog.gradeBookStatus = gradeBookStatus || activityLog.gradeBookStatus;
+    activityLog.comments = comments || activityLog.comments;
+
+    await activityLog.save();
+
+    res.status(200).json({
+      success: true,
+      data: activityLog
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+exports.getActivityLog = async (req, res) => {
+  try {
+    const activityLog = await ActivityTracker.findByPk(req.params.id, {
+      include: [
+        { 
+          model: CourseOffering,
+          as: 'courseOffering',
           include: [
-            { model: Module, attributes: ['code', 'name'] },
-            { model: Facilitator, include: [{ model: User, attributes: ['name', 'email'] }] }
+            { model: Module, as: 'module' },
+            { model: Cohort, as: 'cohort' },
+            { model: User, as: 'facilitator', attributes: ['id', 'firstName', 'lastName'] }
+          ]
+        }
+      ]
+    });
+
+    if (!activityLog) {
+      return res.status(404).json({
+        success: false,
+        message: 'Activity log not found'
+      });
+    }
+
+    // Check if the user is the facilitator or a manager
+    if (activityLog.courseOffering.facilitatorId !== req.user.id && req.user.role !== 'manager') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view this log'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: activityLog
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+exports.getActivityLogsByCourse = async (req, res) => {
+  try {
+    const { courseOfferingId } = req.params;
+
+    // Check if the user is the facilitator or a manager
+    const courseOffering = await CourseOffering.findByPk(courseOfferingId);
+    if (!courseOffering) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course offering not found'
+      });
+    }
+
+    if (courseOffering.facilitatorId !== req.user.id && req.user.role !== 'manager') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view these logs'
+      });
+    }
+
+    const activityLogs = await ActivityTracker.findAll({
+      where: { courseOfferingId },
+      order: [['weekNumber', 'ASC']],
+      include: [
+        { 
+          model: CourseOffering,
+          as: 'courseOffering',
+          include: [
+            { model: Module, as: 'module' },
+            { model: Cohort, as: 'cohort' }
           ]
         }
       ]
@@ -36,136 +207,83 @@ exports.getActivityLogs = async (req, res, next) => {
       count: activityLogs.length,
       data: activityLogs
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
   }
 };
 
-exports.createActivityLog = async (req, res, next) => {
+exports.getActivityLogsByFacilitator = async (req, res) => {
   try {
-    const { courseOfferingId, weekNumber, attendance, formativeOneGrading, 
-            formativeTwoGrading, summativeGrading, courseModeration, 
-            intranetSync, gradeBookStatus } = req.body;
+    const { facilitatorId } = req.params;
 
-    // Verify the facilitator owns this course offering
-    if (req.user.role === 'facilitator') {
-      const facilitator = await Facilitator.findOne({ where: { userId: req.user.id } });
-      const courseOffering = await CourseOffering.findByPk(courseOfferingId);
-      
-      if (!courseOffering || courseOffering.facilitatorId !== facilitator.id) {
-        return next(new ErrorResponse('Not authorized to create log for this course', 403));
-      }
+    // Only managers can view logs by other facilitators
+    if (facilitatorId !== req.user.id && req.user.role !== 'manager') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view these logs'
+      });
     }
 
-    const activityLog = await ActivityTracker.create({
-      courseOfferingId,
-      weekNumber,
-      attendance,
-      formativeOneGrading,
-      formativeTwoGrading,
-      summativeGrading,
-      courseModeration,
-      intranetSync,
-      gradeBookStatus
-    });
-
-    // Send notification to manager
-    await sendNotification({
-      type: 'activity_log_submitted',
-      userId: req.user.id,
-      message: `New activity log submitted for week ${weekNumber}`,
-      data: { activityLogId: activityLog.id }
-    });
-
-    res.status(201).json({
-      success: true,
-      data: activityLog
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.updateActivityLog = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { attendance, formativeOneGrading, formativeTwoGrading, 
-            summativeGrading, courseModeration, intranetSync, gradeBookStatus } = req.body;
-
-    const activityLog = await ActivityTracker.findByPk(id, {
+    const activityLogs = await ActivityTracker.findAll({
       include: [
         { 
           model: CourseOffering,
+          as: 'courseOffering',
+          where: { facilitatorId },
           include: [
-            { model: Facilitator }
+            { model: Module, as: 'module' },
+            { model: Cohort, as: 'cohort' }
           ]
         }
-      ]
-    });
-
-    if (!activityLog) {
-      return next(new ErrorResponse(`Activity log not found with id ${id}`, 404));
-    }
-
-    // Verify the facilitator owns this log
-    if (req.user.role === 'facilitator') {
-      const facilitator = await Facilitator.findOne({ where: { userId: req.user.id } });
-      
-      if (activityLog.CourseOffering.facilitatorId !== facilitator.id) {
-        return next(new ErrorResponse('Not authorized to update this log', 403));
-      }
-    }
-
-    await activityLog.update({
-      attendance: attendance || activityLog.attendance,
-      formativeOneGrading: formativeOneGrading || activityLog.formativeOneGrading,
-      formativeTwoGrading: formativeTwoGrading || activityLog.formativeTwoGrading,
-      summativeGrading: summativeGrading || activityLog.summativeGrading,
-      courseModeration: courseModeration || activityLog.courseModeration,
-      intranetSync: intranetSync || activityLog.intranetSync,
-      gradeBookStatus: gradeBookStatus || activityLog.gradeBookStatus
+      ],
+      order: [['weekNumber', 'ASC']]
     });
 
     res.status(200).json({
       success: true,
-      data: activityLog
+      count: activityLogs.length,
+      data: activityLogs
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
   }
 };
 
-exports.deleteActivityLog = async (req, res, next) => {
+exports.getMyActivityLogs = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const activityLog = await ActivityTracker.findByPk(id, {
+    const activityLogs = await ActivityTracker.findAll({
       include: [
         { 
           model: CourseOffering,
+          as: 'courseOffering',
+          where: { facilitatorId: req.user.id },
           include: [
-            { model: Facilitator }
+            { model: Module, as: 'module' },
+            { model: Cohort, as: 'cohort' }
           ]
         }
-      ]
+      ],
+      order: [['weekNumber', 'ASC']]
     });
-
-    if (!activityLog) {
-      return next(new ErrorResponse(`Activity log not found with id ${id}`, 404));
-    }
-
-    // Only managers can delete logs
-    if (req.user.role !== 'manager') {
-      return next(new ErrorResponse('Not authorized to delete activity logs', 403));
-    }
-
-    await activityLog.destroy();
 
     res.status(200).json({
       success: true,
-      data: {}
+      count: activityLogs.length,
+      data: activityLogs
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
   }
 };

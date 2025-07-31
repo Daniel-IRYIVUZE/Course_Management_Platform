@@ -1,31 +1,38 @@
-// models/module.js
-module.exports = (sequelize, DataTypes) => {
-  const Module = sequelize.define('Module', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    code: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    description: {
-      type: DataTypes.TEXT
-    }
-  }, {
-    timestamps: true,
-    tableName: 'modules'
-  });
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-  Module.associate = (models) => {
-    Module.hasMany(models.CourseOffering, { foreignKey: 'moduleId' });
-  };
+const Module = sequelize.define('Module', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  code: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    unique: true
+  },
+  name: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  description: {
+    type: DataTypes.TEXT
+  },
+  credits: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 3
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  }
+}, {
+  timestamps: true,
+  underscored: true,
+  tableName: 'modules'
+});
 
-  return Module;
-};
+module.exports = Module;

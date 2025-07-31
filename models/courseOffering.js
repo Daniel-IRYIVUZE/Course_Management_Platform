@@ -1,35 +1,77 @@
-// models/courseOffering.js
-module.exports = (sequelize, DataTypes) => {
-  const CourseOffering = sequelize.define('CourseOffering', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    trimester: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    cohort: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    intake: {
-      type: DataTypes.ENUM('HT1', 'HT2', 'FT'),
-      allowNull: false
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+
+const CourseOffering = sequelize.define('CourseOffering', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  moduleId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'modules',
+      key: 'id'
     }
-  }, {
-    timestamps: true,
-    tableName: 'course_offerings'
-  });
+  },
+  cohortId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'cohorts',
+      key: 'id'
+    }
+  },
+  classId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'classes',
+      key: 'id'
+    }
+  },
+  trimesterId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'trimesters',
+      key: 'id'
+    }
+  },
+  intakeId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'intakes',
+      key: 'id'
+    }
+  },
+  modeId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'modes',
+      key: 'id'
+    }
+  },
+  facilitatorId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  }
+}, {
+  timestamps: true,
+  underscored: true,
+  tableName: 'course_offerings'
+});
 
-  CourseOffering.associate = (models) => {
-    CourseOffering.belongsTo(models.Module, { foreignKey: 'moduleId' });
-    CourseOffering.belongsTo(models.Class, { foreignKey: 'classId' });
-    CourseOffering.belongsTo(models.Facilitator, { foreignKey: 'facilitatorId' });
-    CourseOffering.belongsTo(models.Mode, { foreignKey: 'modeId' });
-    CourseOffering.hasMany(models.ActivityTracker, { foreignKey: 'courseOfferingId' });
-  };
-
-  return CourseOffering;
-};
+module.exports = CourseOffering;

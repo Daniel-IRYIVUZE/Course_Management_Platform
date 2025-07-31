@@ -1,14 +1,14 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const Cohort = sequelize.define('Cohort', {
+const Trimester = sequelize.define('Trimester', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
   name: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.STRING(20),
     allowNull: false,
     unique: true
   },
@@ -20,15 +20,15 @@ const Cohort = sequelize.define('Cohort', {
     type: DataTypes.DATEONLY,
     allowNull: false
   },
-  isActive: {
+  isCurrent: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: true
+    defaultValue: false
   }
 }, {
   timestamps: true,
   underscored: true,
-  tableName: 'cohorts'
+  tableName: 'trimesters'
 });
 
-module.exports = Cohort;
+module.exports = Trimester;

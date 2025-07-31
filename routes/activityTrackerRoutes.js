@@ -1,17 +1,44 @@
-// routes/activityTrackerRoutes.js
 const express = require('express');
 const router = express.Router();
 const activityTrackerController = require('../controllers/activityTrackerController');
-const { protect, authorize } = require('../utils/authMiddleware');
+const { protect, authorize } = require('../middlewares/auth');
 
-router
-  .route('/')
-  .get(protect, activityTrackerController.getActivityLogs)
-  .post(protect, authorize('facilitator'), activityTrackerController.createActivityLog);
+// Facilitator routes
+router.post('/', 
+  protect, 
+  authorize('facilitator'), 
+  activityTrackerController.createActivityLog
+);
 
-router
-  .route('/:id')
-  .put(protect, authorize('facilitator'), activityTrackerController.updateActivityLog)
-  .delete(protect, authorize('manager'), activityTrackerController.deleteActivityLog);
+router.put('/:id', 
+  protect, 
+  authorize('facilitator'), 
+  activityTrackerController.updateActivityLog
+);
+
+router.get('/me', 
+  protect, 
+  authorize('facilitator'), 
+  activityTrackerController.getMyActivityLogs
+);
+
+router.get('/:id', 
+  protect, 
+  authorize(['facilitator', 'manager']), 
+  activityTrackerController.getActivityLog
+);
+
+// Manager routes
+router.get('/course/:courseOfferingId', 
+  protect, 
+  authorize('manager'), 
+  activityTrackerController.getActivityLogsByCourse
+);
+
+router.get('/facilitator/:facilitatorId', 
+  protect, 
+  authorize('manager'), 
+  activityTrackerController.getActivityLogsByFacilitator
+);
 
 module.exports = router;

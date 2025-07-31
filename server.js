@@ -1,45 +1,23 @@
-// server.js
 const app = require('./app');
-const sequelize = require('./config/redis');
-const redisClient = require('./utils/redisClient');
-const { startNotificationWorker } = require('./workers/notificationWorker');
+const { sequelize } = require('./models');
+const dotenv = require('dotenv');
 
-const PORT = process.env.PORT || 3000;
+dotenv.config();
 
-// Test database connection
-sequelize.authenticate()
+const PORT = process.env.PORT || 5000;
+
+// Start workers
+require('./workers/notificationWorker');
+
+// Sync database and start server
+sequelize.sync({ alter: true })
   .then(() => {
-    console.log('Database connection has been established successfully.');
-    
-    // Sync all models
-    return sequelize.sync({ alter: true });
-  })
-  .then(() => {
-    console.log('All models were synchronized successfully.');
-    
-    // Test Redis connection
-    return new Promise((resolve, reject) => {
-      redisClient.on('connect', () => {
-        console.log('Connected to Redis');
-        resolve();
-      });
-      
-      redisClient.on('error', (err) => {
-        console.error('Redis connection error:', err);
-        reject(err);
-      });
-    });
-  })
-  .then(() => {
-    // Start notification worker
-    startNotificationWorker();
-    
-    // Start the server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`API documentation available at http://localhost:${PORT}/api-docs`);
     });
   })
   .catch(err => {
-    console.error('Unable to start server:', err);
+    console.error('Unable to sync database:', err);
     process.exit(1);
   });
